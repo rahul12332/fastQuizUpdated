@@ -3,10 +3,10 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../core/contant/appColor.dart';
 
-class CustomSeriesWidget extends StatelessWidget {
+class StatewiseWidget extends StatelessWidget {
   final String subject; // Single subject name
 
-  CustomSeriesWidget({Key? key, required this.subject}) : super(key: key);
+  StatewiseWidget({Key? key, required this.subject}) : super(key: key);
 
   // Function to dynamically assign icons based on subject names
   IconData _getIconForSubject(String subject) {
@@ -48,19 +48,12 @@ class CustomSeriesWidget extends StatelessWidget {
       decoration: BoxDecoration(
         border: Border.all(color: Colors.grey.withOpacity(0.8), width: 0.3),
         borderRadius: BorderRadius.circular(5),
-        image: const DecorationImage(
-            image: AssetImage('assets/bgCon.png'), // Your image path
-            fit: BoxFit.cover, // Ensures image covers the container
-            colorFilter: ColorFilter.mode(
-              Colors.white60, // Adjust color for fading effect
-              BlendMode.modulate, // Modifies image brightness
-            )),
         gradient: LinearGradient(
           colors: [
-            AppColor.dashBoardColor.withOpacity(0.2), // Main color
-            AppColor.dashBoardColor
+            AppColor.drawerTheme.withOpacity(0.2), // Main color
+            AppColor.drawerTheme
                 .withOpacity(0.2), // Slightly transparent variation
-            AppColor.dashBoardColor.withOpacity(0.3)
+            AppColor.drawerTheme.withOpacity(0.3)
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,

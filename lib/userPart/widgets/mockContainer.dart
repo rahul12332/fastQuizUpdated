@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/contant/appColor.dart';
 import '../core/routes.dart';
 
 class CustomMockContainer extends StatelessWidget {
@@ -20,13 +21,23 @@ class CustomMockContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+      margin: EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       width: MediaQuery.of(context).size.width * 0.8,
       padding: const EdgeInsets.all(8.0),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(5),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: AppColor.theme.withOpacity(0.3), width: 0.5),
+        gradient: LinearGradient(
+          colors: [
+            AppColor.subMocListColor.withOpacity(0.3), // Main color
+            AppColor.subMocListColor
+                .withOpacity(0.1), // Slightly transparent variation
+            AppColor.subMocListColor.withOpacity(0.08)
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,

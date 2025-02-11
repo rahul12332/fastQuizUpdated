@@ -17,7 +17,7 @@ class ResultDialog extends StatelessWidget {
 
   void _navigateToScoreScreen(BuildContext context) async {
     await MyDb.calculateResultAndStore(
-        subject: subject, mock: mockTest, score: score);
+        subject: subject, mock: mockTest, score: score, context: context);
     Navigator.pushReplacementNamed(
       context,
       '/score',

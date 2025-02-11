@@ -1,27 +1,36 @@
 import 'dart:async';
 
-import 'package:fast_quiz_tayari/userPart/core/contant/appColor.dart';
-import 'package:fast_quiz_tayari/userPart/repostory/firebaseApi.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../core/contant/appColor.dart';
+import '../repostory/firebaseApi.dart';
+import '../repostory/localDb_repository.dart';
 import '../widgets/customButton.dart';
+import '../widgets/internetchecker.dart';
 import '../widgets/questionwidget.dart';
 import '../widgets/resultDailog.dart';
 import 'score.dart';
 
 class Mocktest extends StatefulWidget {
+  final int subjectIndex;
+  final int mockIndex;
   final String subject;
   final String mock;
 
-  const Mocktest({super.key, required this.subject, required this.mock});
+  const Mocktest(
+      {super.key,
+      required this.subject,
+      required this.mock,
+      required this.subjectIndex,
+      required this.mockIndex});
 
   @override
   State<Mocktest> createState() => _MocktestState();
 }
 
 class _MocktestState extends State<Mocktest> {
-  List<Map<String, dynamic>> questions = [];
+  List<QuestionModel> questions = [];
   int currentQuestionIndex = 0;
   double score = 0;
   Map<int, String?> selectedOptions =
@@ -29,6 +38,72 @@ class _MocktestState extends State<Mocktest> {
   int remainingMinutes = 20; // Timer starting minutes
   int remainingSeconds = 0; // Timer starting seconds
   Timer? _timer;
+  DateTime? _lastBackPressedTime;
+
+  @override
+  void initState() {
+    super.initState();
+    questionfetch();
+    startTimer();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> questionfetch() async {
+    if (!InternetService.isInternetAvailable) {
+      HiveRepository hiveRepository = HiveRepository();
+
+      // Fetch stored Hive data
+      List<SeriesModel> storedData = (await hiveRepository.getSeriesData())
+          .map((e) => SeriesModel(
+                subjectName: e.subjectName,
+                mocks: e.mocks
+                    .map((m) => MockModel(
+                          mockName: m.mockName,
+                          questions: m.questions
+                              .map((q) => QuestionModel(
+                                    question: q.question,
+                                    options: q.options,
+                                    correctAnswer: q.correctAnswer,
+                                  ))
+                              .toList(),
+                        ))
+                    .toList(),
+              ))
+          .toList();
+
+      if (widget.subjectIndex < storedData.length) {
+        SeriesModel series = storedData[widget.subjectIndex];
+
+        if (widget.mockIndex < series.mocks.length) {
+          MockModel mock = series.mocks[widget.mockIndex];
+
+          setState(() {
+            questions = mock.questions
+                .map((q) => QuestionModel(
+                      question: q.question,
+                      options: q.options,
+                      correctAnswer: q.correctAnswer,
+                    ))
+                .toList(); // Ensure questions use the same model reference
+          });
+
+          print(
+              "📂 Loaded ${questions.length} questions from Hive (Offline Mode)");
+        } else {
+          print("❌ Mock index out of range in Hive data");
+        }
+      } else {
+        print("❌ Subject index out of range in Hive data");
+      }
+    } else {
+      await loadQuestions(); // Load from Firestore when online
+    }
+  }
 
   void startTimer() {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -60,32 +135,25 @@ class _MocktestState extends State<Mocktest> {
     );
   }
 
-  @override
-  void initState() {
-    super.initState();
-    loadQuestions();
-    startTimer();
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
   // Fetch the questions based on subject and mock
-  void loadQuestions() async {
-    List<Map<String, dynamic>> fetchedQuestions =
-        await MyDb.fetchQuestions(subject: widget.subject, mock: widget.mock);
+  Future<void> loadQuestions() async {
+    List<Map<String, dynamic>> fetchedQuestions = await MyDb.fetchQuestions(
+      subject: widget.subject,
+      mock: widget.mock,
+      context: context,
+    );
 
-    questions = await fetchedQuestions; // Assign the returned list
+    setState(() {
+      questions =
+          fetchedQuestions.map((q) => QuestionModel.fromMap(q)).toList();
+    });
 
     print("🔄 Questions assigned in initState: ${questions.length}");
   }
 
   void _submitAnswer(String selectedOption) {
     final currentQuestion = questions[currentQuestionIndex];
-    if (selectedOption == currentQuestion['correctAnswer']) {
+    if (selectedOption == currentQuestion.correctAnswer) {
       setState(() {
         score += 1; // Correct answer: add 1 point
       });
@@ -103,12 +171,9 @@ class _MocktestState extends State<Mocktest> {
       });
     } else {
       // Show dialog before navigating to the score screen
+      ResultDialog.show(context, widget.subject, widget.mock, score);
     }
   }
-
-  // Function to show the result analysis dialog
-
-  DateTime? _lastBackPressedTime;
 
   @override
   Widget build(BuildContext context) {
@@ -116,12 +181,10 @@ class _MocktestState extends State<Mocktest> {
       return Scaffold(
         appBar: AppBar(title: Text("Mock Test - ${widget.subject}")),
         body: Center(
-          child: Text(
-            'Upcoming Soon!',
-            style: TextStyle(
-              fontSize: 20,
-              color: Colors.grey,
-            ),
+          child: CircularProgressIndicator(
+            color: AppColor.theme,
+            backgroundColor: AppColor.splashBg,
+            strokeWidth: 5,
           ),
         ),
       );
@@ -141,7 +204,7 @@ class _MocktestState extends State<Mocktest> {
 
           // Show a toast or snackbar message (optional)
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
+            const SnackBar(
               content: Text('Press back again to exit'),
               duration: Duration(seconds: 2),
             ),
@@ -163,7 +226,7 @@ class _MocktestState extends State<Mocktest> {
             children: [
               // Display current question
               SmokeyQuestionWidget(
-                question: currentQuestion["question"],
+                question: currentQuestion.question,
                 serialNumber: currentQuestionIndex + 1,
               ),
               const SizedBox(height: 20),
@@ -180,36 +243,48 @@ class _MocktestState extends State<Mocktest> {
                       color: Colors.grey,
                     ),
                   ),
-                  SizedBox(width: 50),
+                  const SizedBox(width: 50),
                 ],
               ),
               // Display options (Radio Buttons)
               Container(
-                padding: EdgeInsets.symmetric(horizontal: 5),
+                padding: const EdgeInsets.symmetric(horizontal: 5),
                 height: MediaQuery.of(context).size.height * 0.4,
                 child: ListView.builder(
-                  itemCount: currentQuestion['options'].length,
+                  itemCount: currentQuestion.options.length,
                   itemBuilder: (context, index) {
                     return Container(
-                      margin: EdgeInsets.all(8),
+                      margin: const EdgeInsets.symmetric(
+                          vertical: 10, horizontal: 10),
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
                         borderRadius: BorderRadius.circular(5),
-                        border:
-                            Border.all(width: 0.5, color: Colors.grey.shade400),
+                        border: Border.all(
+                            color: Colors.grey.shade800, width: 0.09),
+                        gradient: LinearGradient(
+                          colors: [
+                            AppColor.radioButton.withOpacity(0.5), // Main color
+                            AppColor.radioButton.withOpacity(
+                                0.5), // Slightly transparent variation
+                            AppColor.radioButton.withOpacity(0.5)
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        // Optional rounded corners
                       ),
                       child: RadioListTile<String>(
                         materialTapTargetSize: MaterialTapTargetSize
                             .shrinkWrap, // Reduces the size
                         activeColor: Colors.green,
-                        value: currentQuestion['options'][index],
+                        value: currentQuestion.options[index],
                         groupValue: selectedOptions[currentQuestionIndex],
                         title: Text(
-                          currentQuestion['options'][index],
+                          currentQuestion.options[index],
                           style: GoogleFonts.acme(
-                              color: Colors.black.withOpacity(0.7),
-                              letterSpacing: 1,
-                              fontWeight: FontWeight.w400),
+                            color: Colors.black.withOpacity(0.7),
+                            letterSpacing: 1,
+                            fontWeight: FontWeight.w400,
+                          ),
                         ),
                         onChanged: (value) {
                           MyDb.fetchAndUpdateQuestion(
@@ -228,9 +303,7 @@ class _MocktestState extends State<Mocktest> {
                   },
                 ),
               ),
-              SizedBox(
-                height: 40,
-              ),
+              const SizedBox(height: 40),
               // Show Previous Button and Next Button
               Align(
                 alignment: Alignment.bottomCenter,
@@ -239,7 +312,7 @@ class _MocktestState extends State<Mocktest> {
                     children: [
                       Container(
                         width: double.infinity,
-                        padding: EdgeInsets.symmetric(horizontal: 20),
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
                         child: Row(
                           children: [
                             if (currentQuestionIndex > 0)
@@ -264,7 +337,7 @@ class _MocktestState extends State<Mocktest> {
                                   ),
                                 ),
                               ),
-                            Spacer(),
+                            const Spacer(),
                             Visibility(
                               visible:
                                   currentQuestionIndex < questions.length - 1,
@@ -298,25 +371,85 @@ class _MocktestState extends State<Mocktest> {
                           ],
                         ),
                       ),
-                      SizedBox(height: 20),
+                      const SizedBox(height: 20),
                       // Show Submit Button if it's the last question
                       Custombutton(
-                          label: "summit",
-                          onPressed: () async {
-                            ResultDialog.show(
-                                context, widget.subject, widget.mock, score);
-                          }),
+                        label: "Submit",
+                        onPressed: () async {
+                          ResultDialog.show(
+                              context, widget.subject, widget.mock, score);
+                        },
+                      ),
                     ],
                   ),
                 ),
               ),
-              SizedBox(
-                height: 50,
-              )
+              const SizedBox(height: 50),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class QuestionModel {
+  final String question;
+  final List<String> options;
+  final String correctAnswer;
+
+  QuestionModel({
+    required this.question,
+    required this.options,
+    required this.correctAnswer,
+  });
+
+  // Convert Firestore document to QuestionModel
+  factory QuestionModel.fromMap(Map<String, dynamic> data) {
+    return QuestionModel(
+      question: data['question'] ?? '',
+      options: List<String>.from(data['options'] ?? []),
+      correctAnswer: data['correctAnswer'] ?? '',
+    );
+  }
+}
+
+class MockModel {
+  final String mockName;
+  final List<QuestionModel> questions;
+
+  MockModel({
+    required this.mockName,
+    required this.questions,
+  });
+
+  // Convert Firestore data to MockModel
+  factory MockModel.fromFirestore(
+      String mockName, List<Map<String, dynamic>> questionDocs) {
+    return MockModel(
+      mockName: mockName,
+      questions: questionDocs.map((q) => QuestionModel.fromMap(q)).toList(),
+    );
+  }
+}
+
+class SeriesModel {
+  final String subjectName;
+  final List<MockModel> mocks;
+
+  SeriesModel({
+    required this.subjectName,
+    required this.mocks,
+  });
+
+  // Convert Firestore data to SeriesModel
+  factory SeriesModel.fromFirestore(
+      String subjectName, Map<String, List<Map<String, dynamic>>> mockData) {
+    return SeriesModel(
+      subjectName: subjectName,
+      mocks: mockData.entries.map((entry) {
+        return MockModel.fromFirestore(entry.key, entry.value);
+      }).toList(),
     );
   }
 }

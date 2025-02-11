@@ -1,63 +1,91 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fast_quiz_tayari/userPart/domain/sharedPre.dart';
+import 'package:fast_quiz_tayari/userPart/widgets/internetchecker.dart';
 import 'package:flutter/material.dart';
 
 import '../core/routes.dart';
 import '../widgets/customCircularProgressIndicatior.dart';
 
 class HandleNavi {
-  static Future<void> navigateToMockTestOrPayment({
-    required BuildContext context,
-    required String mockTestName,
-    required bool isPaid,
-    required String userEmail,
-    required String subjectName,
-  }) async {
+  static Future<void> navigateToMockTestOrPayment(
+      {required BuildContext context,
+      required String mockTestName,
+      required bool isPaid,
+      required String userEmail,
+      required String subjectName,
+      required int subjectIndex,
+      required int mockIndex}) async {
+    String? token = await SharedPrefs().getToken();
+    print("----we print token $token");
     // If the mock test is free, navigate directly to the mock test screen
-    if (!isPaid) {
-      print("✅ Redirecting to Mocktest Screen (Free Mock)");
-      await _storeQuestionsWithLoader(
-          context, userEmail, subjectName, mockTestName);
+    if (!InternetService.isInternetAvailable) {
       Navigator.pushNamed(
         context,
         Routes.mockTest,
-        arguments: {'subject': subjectName, 'mock': mockTestName},
-      );
-      return;
-    }
-
-    if (userEmail.isEmpty) {
-      print("❌ User email is null or empty");
-      return;
-    }
-
-    DocumentSnapshot userSnapshot = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(userEmail)
-        .get();
-
-    Map<String, dynamic>? userData =
-        userSnapshot.data() as Map<String, dynamic>?;
-
-    bool hasPaid = userData != null &&
-        userData.containsKey('paymentStatus') &&
-        userData['paymentStatus'] == true;
-
-    print("🟢 User Payment Status: $hasPaid");
-
-    if (hasPaid) {
-      // If the user has paid, navigate to the mock test screen
-      print("✅ Redirecting to Mocktest Screen (Paid Mock)");
-      await _storeQuestionsWithLoader(
-          context, userEmail, subjectName, mockTestName);
-      Navigator.pushNamed(
-        context,
-        Routes.mockTest,
-        arguments: {'subject': subjectName, 'mock': mockTestName},
+        arguments: {
+          'subject': subjectName,
+          'mock': mockTestName,
+          'subjectIndex': subjectIndex,
+          "mockIndex": mockIndex
+        },
       );
     } else {
-      // If the user has not paid or the field is missing, redirect to the payment screen
-      print("➡️ Redirecting to Payment Screen");
-      Navigator.pushNamed(context, Routes.razorPay);
+      if (!isPaid) {
+        print("✅ Redirecting to Mocktest Screen (Free Mock)");
+        await _storeQuestionsWithLoader(
+            context, userEmail, subjectName, mockTestName);
+        Navigator.pushNamed(
+          context,
+          Routes.mockTest,
+          arguments: {
+            'subject': subjectName,
+            'mock': mockTestName,
+            'subjectIndex': subjectIndex,
+            "mockIndex": mockIndex
+          },
+        );
+        return;
+      }
+
+      if (userEmail.isEmpty) {
+        print("❌ User email is null or empty");
+        return;
+      }
+
+      DocumentSnapshot userSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userEmail)
+          .get();
+
+      Map<String, dynamic>? userData =
+          userSnapshot.data() as Map<String, dynamic>?;
+
+      bool hasPaid = userData != null &&
+          userData.containsKey('paymentStatus') &&
+          userData['paymentStatus'] == true;
+
+      print("🟢 User Payment Status: $hasPaid");
+
+      if (hasPaid) {
+        // If the user has paid, navigate to the mock test screen
+        print("✅ Redirecting to Mocktest Screen (Paid Mock)");
+        await _storeQuestionsWithLoader(
+            context, userEmail, subjectName, mockTestName);
+        Navigator.pushNamed(
+          context,
+          Routes.mockTest,
+          arguments: {
+            'subject': subjectName,
+            'mock': mockTestName,
+            'subjectIndex': subjectIndex,
+            "mockIndex": mockIndex
+          },
+        );
+      } else {
+        // If the user has not paid or the field is missing, redirect to the payment screen
+        print("➡️ Redirecting to Payment Screen");
+        Navigator.pushNamed(context, Routes.razorPay);
+      }
     }
   }
 
@@ -65,7 +93,6 @@ class HandleNavi {
   static Future<void> _storeQuestionsWithLoader(BuildContext context,
       String userEmail, String subjectName, String mockTestName) async {
     ProgressDialog.show(context, true); // Show loader
-
     try {
       await _storeQuestions(userEmail, subjectName, mockTestName);
     } finally {
@@ -76,6 +103,9 @@ class HandleNavi {
   // Helper function to fetch and store questions
   static Future<void> _storeQuestions(
       String userEmail, String subjectName, String mockTestName) async {
+    String? token = await SharedPrefs().getToken();
+    print("token --$token");
+
     try {
       FirebaseFirestore firestore = FirebaseFirestore.instance;
       var snapshot = await firestore

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/contant/appColor.dart';
+
 class SmokeyQuestionWidget extends StatelessWidget {
   final int serialNumber;
   final String question;
@@ -12,9 +14,26 @@ class SmokeyQuestionWidget extends StatelessWidget {
       margin: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       padding: EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        color: Color(0x66B1C29E)
-            .withOpacity(0.2), // Smoky black color with opacity
-        borderRadius: BorderRadius.circular(12.0),
+        borderRadius: BorderRadius.circular(5),
+        gradient: LinearGradient(
+          colors: [
+            AppColor.theme.withOpacity(0.1), // Main color
+            AppColor.theme.withOpacity(0.2), // Slightly transparent variation
+            AppColor.theme.withOpacity(0.1)
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        // Optional rounded corners
+        boxShadow: [
+          BoxShadow(
+            color: AppColor.questionColor
+                .withOpacity(0.1), // Shadow color similar to the gradient
+            spreadRadius: 2, // Spread effect
+            blurRadius: 2, // Smooth blur
+            offset: const Offset(1, 2), // Shadow position
+          ),
+        ],
       ),
       child: Row(
         crossAxisAlignment:

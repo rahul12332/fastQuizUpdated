@@ -1,5 +1,11 @@
+import 'dart:isolate';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fast_quiz_tayari/userPart/domain/sharedPre.dart';
+import 'package:flutter/cupertino.dart';
+
+import '../core/helper.dart';
+import '../core/networkError.dart';
 
 class MyDb {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -68,7 +74,9 @@ class MyDb {
   }
 
   static Future<List<Map<String, dynamic>>> fetchQuestions(
-      {required String subject, required String mock}) async {
+      {required String subject,
+      required String mock,
+      required BuildContext context}) async {
     String? email = await SharedPrefs().getEmail();
     print("---$email");
 
@@ -99,17 +107,13 @@ class MyDb {
             }
           }
         }
-
-        if (fetchedQuestions.isNotEmpty) {
-          print("📚 Loaded ${fetchedQuestions.length} questions successfully!");
-        } else {
-          print("⚠️ No valid questions found in Firestore.");
-        }
-      } else {
-        print("❌ No question documents found in Firestore.");
       }
     } catch (e) {
       print("❌ Error fetching questions: $e");
+      FirebaseError error = FirebaseError.withError(error: e);
+
+      SnackBarHelper.showSnackBar(
+          context, "Error:  ${error.getErrorMessage()}");
     }
 
     return fetchedQuestions; // Return the fetched list
@@ -194,7 +198,8 @@ class MyDb {
   static Future<void> calculateResultAndStore(
       {required String subject,
       required String mock,
-      required double score}) async {
+      required double score,
+      required BuildContext context}) async {
     try {
       String? email = await SharedPrefs().getEmail();
       if (email == null) {
@@ -284,7 +289,18 @@ class MyDb {
 
       print("✅ Results stored successfully for $email in mock $mock.");
     } catch (e) {
-      print("❌ Error calculating/storing results: $e");
+      FirebaseError error = FirebaseError.withError(error: e);
+
+      SnackBarHelper.showSnackBar(
+          context, "Error:  ${error.getErrorMessage()}");
     }
+  }
+
+  static void fetchSeriesIsolate(SendPort sendPort) async {
+    QuerySnapshot snapshot =
+        await FirebaseFirestore.instance.collection('series').get();
+    List<Map<String, dynamic>> data =
+        snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+    sendPort.send(data);
   }
 }

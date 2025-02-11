@@ -2,6 +2,7 @@ import 'package:fast_quiz_tayari/userPart/view/RazorpayPaymentScreen.dart';
 import 'package:fast_quiz_tayari/userPart/view/dasboard.dart';
 import 'package:fast_quiz_tayari/userPart/view/login.dart';
 import 'package:fast_quiz_tayari/userPart/view/mocktest.dart';
+import 'package:fast_quiz_tayari/userPart/view/privacyPolicy.dart';
 import 'package:fast_quiz_tayari/userPart/view/reviews.dart';
 import 'package:fast_quiz_tayari/userPart/view/score.dart';
 import 'package:fast_quiz_tayari/userPart/view/splashScreen.dart';
@@ -18,6 +19,7 @@ class Routes {
   static const String score = '/score';
   static const String razorPay = '/razorPay';
   static const String subjectMockList = '/subjectMockList';
+  static const String privacyPolicy = '/privacy';
 }
 
 class AppRoutes {
@@ -27,16 +29,21 @@ class AppRoutes {
     switch (settings.name) {
       case Routes.splash:
         return MaterialPageRoute(builder: (_) => const SplashScreen());
+      case Routes.privacyPolicy:
+        return MaterialPageRoute(builder: (_) => PrivacyPolicyScreen());
       case Routes.login:
         return MaterialPageRoute(builder: (_) => LoginScreen());
       case Routes.dashboard:
         return MaterialPageRoute(builder: (_) => UserDasboard());
       case Routes.mockTest:
-        if (args is Map<String, String>) {
+        if (args is Map<String, dynamic>) {
           return MaterialPageRoute(
             builder: (_) => Mocktest(
               subject: args['subject']!,
               mock: args['mock']!,
+              subjectIndex:
+                  args['subjectIndex'] as int, // Ensure it's cast as int
+              mockIndex: args['mockIndex'] as int,
             ),
           );
         }
@@ -66,10 +73,13 @@ class AppRoutes {
         return _errorRoute();
       case Routes.razorPay:
         return MaterialPageRoute(builder: (_) => RazorpayPaymentScreen());
-      case Routes.subjectMockList: // Handle SubjectMockList route
-        if (args is String) {
+      case Routes.subjectMockList:
+        if (args is Map<String, dynamic>) {
           return MaterialPageRoute(
-            builder: (_) => Subjectmocklist(subjectName: args),
+            builder: (_) => Subjectmocklist(
+              subjectName: args['subjectName'],
+              index: args['index'],
+            ),
           );
         }
         return _errorRoute();

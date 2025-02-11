@@ -285,6 +285,9 @@ class _MocktestState extends State<Reviews> {
                 ],
               ),
             ),
+            SizedBox(
+              height: 40,
+            )
           ],
         ),
       ),

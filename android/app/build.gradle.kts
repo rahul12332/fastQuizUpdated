@@ -50,7 +50,8 @@ android {
         release {
             isMinifyEnabled = false
             isShrinkResources = false
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = signingConfigs.getByName("debug") // 👈 Use debug signing for testing
+//            signingConfig = signingConfigs.getByName("release")
         }
     }
 }

@@ -6,28 +6,18 @@ import 'contant/appColor.dart';
 class AppTheme {
   static ThemeData get themeData {
     return ThemeData(
-      primaryColor: AppColor.theme,
-      scaffoldBackgroundColor: AppColor.pistelGray,
-      appBarTheme: AppBarTheme(
-        backgroundColor: AppColor.theme,
-        titleTextStyle: GoogleFonts.acme(
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
+        primaryColor: AppColor.theme,
+        scaffoldBackgroundColor: AppColor.bg,
+        appBarTheme: AppBarTheme(
+          backgroundColor: AppColor.theme,
+          titleTextStyle: GoogleFonts.acme(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-      ),
-      buttonTheme: ButtonThemeData(
-        buttonColor: AppColor.buttonColor,
-      ),
-      textTheme: TextTheme(
-        titleLarge: GoogleFonts.aclonica(
-          color: AppColor.textColor,
-          letterSpacing: 1,
+        buttonTheme: ButtonThemeData(
+          buttonColor: AppColor.buttonColor,
         ),
-        bodyMedium: GoogleFonts.acme(
-          fontSize: 16,
-          color: AppColor.textColor,
-        ),
-      ),
-    );
+        textTheme: GoogleFonts.adaminaTextTheme());
   }
 }
